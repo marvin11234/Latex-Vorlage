@@ -1,0 +1,15 @@
+    public EngineDriver setupEngine(string engineType)
+    {
+        this.configuration = this.loadConfig();
+
+        if(engineType == "Faulhaber")
+        {
+            return this.configureFaulhaberEngine();
+        }
+        elseif(engineType == "Metronix"){
+            return this.configureMetronixEngine();
+        }
+    
+        return this.configureFaulhaberEngine();
+        
+    }

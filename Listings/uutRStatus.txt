@@ -1,0 +1,10 @@
+ public int UUT_RStatus()
+   {
+      int receive[];
+      Hiperface_Command cmd = { 0x50 => command,
+                                 true => responseRequired };
+      receive =  this.hiperfaceDriver.Hiperface_Execute(this.hiperfaceId, cmd);
+
+      return receive[0];
+
+   }

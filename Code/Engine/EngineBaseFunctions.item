@@ -1,0 +1,100 @@
+ITEL version 3.0
+require "EngineDriver.item"
+require "FaulhaberEngineDriver.item"
+//require "MetronixEngineDriver.item"
+require "EngineComInterface.item"
+
+public class EngineBaseFunctions{
+    
+   
+    variant configuration = {};
+
+    public New(){
+
+    }
+
+    public EngineDriver setupEngine(string engineType)
+    {
+        this.configuration = this.loadConfig();
+
+        if(engineType == "Faulhaber")
+        {
+            return this.configureFaulhaberEngine();
+        }
+        elseif(engineType == "Metronix"){
+            return this.configureMetronixEngine();
+        }
+    
+        return this.configureFaulhaberEngine();
+        
+    }
+
+    public void tearDownEngine(EngineDriver driver){
+        // Stop motor
+        driver.RotateStop();
+
+        // Disable Faulhaber output stage
+        driver.DisableDrive();
+        // Close Faulhaber interface
+        driver.Close();
+    }
+
+    variant loadConfig(){
+        JsonDocument doc = JsonDocument.Parse(File.configData, "LocalConfig.json");
+        variant testCaseConfiguration = doc.RootValue();
+        return testCaseConfiguration;
+    }
+    
+    EngineDriver configureFaulhaberEngine(){
+        // COM interface settings
+        // COM3, 9600 Baud, 8 data bits, no parity, 1 stop bit, in buffer: 512byte, out buffer: 512byte
+        int comPort = this.configuration.Equipment.Faulhaber_1.Com.value.AsString().AsInt();
+        int baudRate = this.configuration.Equipment.Faulhaber_1.Baudrate.value.AsString().AsInt();
+        int dataBits = this.configuration.Equipment.Faulhaber_1.DataBits.value.AsString().AsInt();
+        string parityString = this.configuration.Equipment.Faulhaber_1.Parity.value.AsString();
+        int parity;
+        if ("no" == parityString)
+        {
+        parity = ComInterfaceDriver.noParity;
+        }
+        elseif ("even" == parityString)
+        {
+        parity = ComInterfaceDriver.evenParity;
+        }
+        else
+        {
+        parity = ComInterfaceDriver.oddParity;
+        }
+        string stopbitString = this.configuration.Equipment.Faulhaber_1.StopBit.value.AsString();
+        int stopbit;
+        if ("1" == stopbitString)
+        {
+        stopbit = ComInterfaceDriver.oneStopBit;
+        }
+        else
+        {
+        stopbit = ComInterfaceDriver.twoStopBits;
+        }
+        int inBuffSize = this.configuration.Equipment.Faulhaber_1.InputBufferSize.value.AsString().AsInt();
+        int outBuffSize = this.configuration.Equipment.Faulhaber_1.OutputBufferSize.value.AsString().AsInt();
+        int comConfig[] = [comPort, baudRate, dataBits, parity, stopbit, inBuffSize, outBuffSize];
+        // Framing:
+        // Read transfer beginning = ""
+        // Read transfer ending "\x0d"
+        // Write transfer beginning = ""
+        // Write transfer ending "\x0d"
+        string framingConfiguration[] = ["", "\x0d", "", "\x0d"];
+        EngineComInterface mci = EngineComInterface.New(comConfig, framingConfiguration);
+        int feedbackResolution = this.configuration.Equipment.Faulhaber_1.FeedbackResolution.value.AsString().AsInt();
+        return FaulhaberEngineDriver.New(mci, feedbackResolution);
+    }
+
+    /*EngineDriver configureMetronixEngine(){
+        EngineComInterface communicationInterface;
+        return MetronixEngineDriver.New(communicationInterface);
+    }*/
+
+
+//****************************************************************************
+
+};

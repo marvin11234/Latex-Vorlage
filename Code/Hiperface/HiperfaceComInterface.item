@@ -1,0 +1,170 @@
+ITEL version 3.0
+require "lib:global:Div07/DataHelpers/DataHelpers.item"
+require "file:testCases:SYS/Datalog_Handler.item"
+require "HiperfaceStructs.item"
+
+
+
+public class HiperfaceComInterface{
+
+
+
+
+      DataLogging log = DataLogging.New();
+      hashint Hiperface_Data hiperfaceData;
+
+
+
+      int baudrate = 9600;
+      int dataBits = 8;
+      int stopBit =  ComInterfaceDriver.oneStopBit;
+      int parity = ComInterfaceDriver.evenParity;
+      int queueSize = 512;
+      int intervalTimeout = 10000;
+
+
+
+//*********************************************************************************************
+//! \brief   Hiperface_Init
+//!
+//! Configures a hiperface device interface
+//!
+//! \param   identifier of the used hiperface device
+//! \param   number of COM port
+//! \param   deviceAddress of the hiperface device
+//! \param   comParams parameters of the serial interface
+//! \returns optional DriverGroup.
+//*********************************************************************************************
+      public void Hiperface_Init(HiperfaceConfig config)
+      {
+
+
+         Gui.MessageBox("AUSGABE: " + this.baudrate.Format());
+
+         Data_Format format = { Data.baseHex => baseField,
+                              false => showBase,
+                              true => upperCase,
+                              2 => width,
+                              "0" => fill };
+
+         Logger_Call call = Logger.LogCall("Hiperface_Init()");
+         call.In("COM", config.comNo.Format());
+         call.In("deviceAddress", "0x" + config.hiperfaceAddress.Format(format));
+
+         DriverGroup factory = DriverGroup.New();
+         ComInterfaceDriver comIf = factory.NewComInterfaceDriver("Hiperface Interface");
+
+
+         comIf.ConfigComNo(config.comNo);
+         comIf.ConfigBaudRate(this.baudrate);
+         comIf.ConfigFormat(this.dataBits, this.parity, this.stopBit);
+         comIf.ConfigQueueSizes(this.queueSize, this.queueSize);
+
+         int signToSignTimeout;
+         if (config.signToSignTimeout.IsDef()) {
+            signToSignTimeout = config.signToSignTimeout;
+         }
+         else {
+            signToSignTimeout = 20;
+         }
+
+         this.hiperfaceData<config.id> = { config.hiperfaceAddress => deviceAddress,
+                                    false => warning,
+                                    0x69 => code0,
+                                    factory => driverGroup,
+                                    comIf => interface,
+                                    config.signToSignTimeout => signToSignTimeout };//,
+                                    //socket => socket };
+
+         this.hiperfaceData<config.id>.driverGroup.Open();
+
+         call.Exit();
+      }
+
+//*********************************************************************************************
+//! \brief   Hiperface_Exit
+//!
+//! Closes the hiperface interface
+//!
+//! \param   identifier of the used hiperface interface
+//*********************************************************************************************
+      public void Hiperface_Exit(int id)
+      {
+         Logger_Call call = Logger.LogCall("Hiperface_Exit()");
+         call.In("Hiperface Device id", id);
+         this.hiperfaceData<id>.driverGroup.Close();
+
+         this.Hiperface_Baudrate(id, 9600);
+
+         call.Exit();
+
+      }
+
+//*********************************************************************************************
+//! \brief  Hiperface_GetInterfaceDriver
+//!
+//! Returns the ComInterfaceDriver which is used for the communication.
+//! This function is only for special use cases!
+//!
+//! \param identifier of the used hiperface interface.
+//! \return instance of the used ComInterfaceDriver.
+//*********************************************************************************************
+      public ComInterfaceDriver Hiperface_GetInterfaceDriver(int id)
+      {
+         return this.hiperfaceData<id>.interface;
+
+      }
+
+//*********************************************************************************************
+//! \brief   Hiperface_Baudrate
+//!
+//! Sets the baudrate of the used interface.
+//!
+//! \param   identifier of the used hiperface device
+//*********************************************************************************************
+      public void Hiperface_Baudrate(int id, int baudRate)
+      {
+         Logger_Call call = Logger.LogCall("Hiperface_Baudrate()");
+         call.In("Hiperface device id", id);
+         call.In("Baudrate: ", baudRate);
+
+
+         this.hiperfaceData<id>.driverGroup.Close();
+
+         switch (baudRate) {
+            case 9600: {
+               this.hiperfaceData<id>.interface.ConfigBaudRate(9600);
+               this.hiperfaceData<id>.interface.ConfigFormat(this.dataBits, this.parity, this.stopBit);
+
+            }
+         }
+
+         this.hiperfaceData<id>.driverGroup.Open();
+
+         call.Exit();
+
+      }
+
+//*********************************************************************************************
+//! \brief   getGiperfacedata
+//!
+//! Getter function which returns the actual hiperfaceData struct
+//!
+//! \param   id of the used hiperface device
+//*********************************************************************************************      
+      public Hiperface_Data getHiperfaceData(int id){
+         return this.hiperfaceData<id>;
+      }
+//*********************************************************************************************
+//! \brief   getGiperfacedata
+//!
+//! Setter function which overwrites the actual hiperfaceData struct
+//!
+//! \param   id of the used hiperface device
+//********************************************************************************************* 
+      public void setHiperfaceData(int id, Hiperface_Data hiperfaceData){
+         this.hiperfaceData<id> = hiperfaceData;
+      }
+
+
+};

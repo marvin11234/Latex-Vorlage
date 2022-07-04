@@ -1,0 +1,98 @@
+ITEL version 3.0
+
+//=============================================================================
+//  Copyright (c) SICK AG - Motion Control Sensors
+//  Project: AutomatedTesting@GBC07
+//-----------------------------------------------------------------------------
+//! @file MotorDriver.item
+//! @author hummema1
+//! @version
+//! $Revision:  $
+//! $Date: 2020-10-28 $
+//!
+//! @brief This module implements the base class for the Motor Drivers
+//-----------------------------------------------------------------------------
+//  Notes
+//  Initial author: hummema1
+//  $Author: baumama $
+//=============================================================================
+
+require "EngineComInterface.item"
+
+public class EngineDriver {
+
+   public New() {
+      Gui.MessageBox("im a EngineDriver");  
+   }
+   
+   // public methods for Faulhaber and Metronix
+   // --------------------------------------------------------------------------------   
+
+   public void Init() {
+      this.InitImplementation();
+   }
+   
+   public void Close() {
+      this.CloseImplementation();
+   }
+   
+   public void SendCommand(string command) {
+      this.SendCommandImplementation(command);
+   }
+   
+   public void WriteBaudrate(int baudrate) {
+      this.WriteBaudrateImplementation(baudrate);
+   }
+
+   public void EnableDrive() {
+      this.EnableDriveImplementation();
+   }
+
+   public void DisableDrive() {
+      this.DisableDriveImplementation();
+   }
+
+   public void ResetDrive() {
+      this.ResetDriveImplementation();
+   }
+
+   public float GetSpeed() {
+      return this.GetSpeedImplementation();
+   }
+
+   public float GetPosition() {
+      return this.GetPositionImplementation();
+   }
+
+   public void Rotate(int speed) {
+      this.RotateImplementation(speed);
+   }
+
+   public void RotateStop() {
+      this.RotateStopImplementation();
+   }
+
+   public void StopPositioning() {
+      this.StopPositioningImplementation();
+   }
+
+   public bool InPosition() {
+      return this.InPositionImplementation();
+   }
+
+   // virtual methods
+   // --------------------------------------------------------------------------------
+   virtual void InitImplementation();
+   virtual void CloseImplementation();
+   virtual void SendCommandImplementation(string command);
+   virtual void WriteBaudrateImplementation(int baudrate);
+   virtual void EnableDriveImplementation();
+   virtual void DisableDriveImplementation();
+   virtual void ResetDriveImplementation();
+   virtual float GetSpeedImplementation();
+   virtual float GetPositionImplementation();
+   virtual void RotateImplementation(int speed);
+   virtual void RotateStopImplementation();
+   virtual void StopPositioningImplementation();
+   virtual bool InPositionImplementation();
+};

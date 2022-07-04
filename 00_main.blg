@@ -1,0 +1,89 @@
+This is BibTeX, Version 0.99d
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: 00_main.aux
+Reallocating 'name_of_file' (item size: 1) to 9 items.
+The style file: IEEEtran.bst
+Reallocating 'name_of_file' (item size: 1) to 13 items.
+A level-1 auxiliary file: 01_Titel.aux
+Reallocating 'name_of_file' (item size: 1) to 18 items.
+A level-1 auxiliary file: 02_Eidesstatt.aux
+Reallocating 'name_of_file' (item size: 1) to 17 items.
+A level-1 auxiliary file: 02_Abstrackt.aux
+Reallocating 'name_of_file' (item size: 1) to 21 items.
+A level-1 auxiliary file: 03_Verzeichnisse.aux
+Reallocating 'name_of_file' (item size: 1) to 18 items.
+A level-1 auxiliary file: 03_Einleitung.aux
+Reallocating 'name_of_file' (item size: 1) to 21 items.
+A level-1 auxiliary file: 031_RelatedWorke.aux
+Reallocating 'name_of_file' (item size: 1) to 18 items.
+A level-1 auxiliary file: 04_Grundlagen.aux
+Reallocating 'name_of_file' (item size: 1) to 15 items.
+A level-1 auxiliary file: 06_Konzept.aux
+Reallocating 'name_of_file' (item size: 1) to 23 items.
+A level-1 auxiliary file: 07_Implementierung.aux
+Reallocating 'name_of_file' (item size: 1) to 18 items.
+A level-1 auxiliary file: 08_Evaluation.aux
+Reallocating 'name_of_file' (item size: 1) to 23 items.
+A level-1 auxiliary file: 081_Ausblick_Fazit.aux
+Reallocating 'name_of_file' (item size: 1) to 17 items.
+A level-1 auxiliary file: 10_Literatur.aux
+Reallocating 'name_of_file' (item size: 1) to 10 items.
+Reallocating 'name_of_file' (item size: 1) to 14 items.
+A level-1 auxiliary file: 09_Anhang.aux
+Reallocating 'singl_function' (item size: 4) to 100 items.
+Reallocating 'singl_function' (item size: 4) to 100 items.
+Reallocating 'singl_function' (item size: 4) to 100 items.
+Reallocating 'singl_function' (item size: 4) to 100 items.
+Reallocating 'wiz_functions' (item size: 4) to 6000 items.
+Reallocating 'singl_function' (item size: 4) to 100 items.
+Database file #1: Literatur.bib
+-- IEEEtran.bst version 1.14 (2015/08/26) by Michael Shell.
+-- http://www.michaelshell.org/tex/ieeetran/bibtex/
+-- See the "IEEEtran_bst_HOWTO.pdf" manual for usage information.
+Warning--empty note in Prof.Dr.WolfgangSchramm.2020
+Warning--empty note in Prof.Dr.WolfgangSchramm.2009
+Warning--edition ordinal word "[Nachdr.]" may be too high (or improper) for conversion in Gamma.2008
+
+Done.
+You've used 28 entries,
+            4493 wiz_defined-function locations,
+            1061 strings with 13386 characters,
+and the built_in function-call counts, 11317 in all, are:
+= -- 893
+> -- 153
+< -- 14
++ -- 68
+- -- 34
+* -- 435
+:= -- 2077
+add.period$ -- 64
+call.type$ -- 28
+change.case$ -- 25
+chr.to.int$ -- 42
+cite$ -- 31
+duplicate$ -- 939
+empty$ -- 1122
+format.name$ -- 37
+if$ -- 2525
+int.to.chr$ -- 0
+int.to.str$ -- 28
+missing$ -- 202
+newline$ -- 135
+num.names$ -- 28
+pop$ -- 584
+preamble$ -- 1
+purify$ -- 0
+quote$ -- 4
+skip$ -- 863
+stack$ -- 0
+substring$ -- 93
+swap$ -- 514
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 5
+type$ -- 28
+warning$ -- 3
+while$ -- 32
+width$ -- 30
+write$ -- 280
+(There were 3 warnings)

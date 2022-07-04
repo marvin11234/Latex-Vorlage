@@ -1,0 +1,12 @@
+private New(){
+
+   }
+
+   static HiperfaceComInterface hiperfaceComInterfaceObject;
+
+   public static getInstance(){
+      if(hiperfaceComInterfaceObject == null){
+         hiperfaceComInterfaceObject = HiperfaceComInterface.New();
+      }
+      return hiperfaceComInterfaceObject;
+   }

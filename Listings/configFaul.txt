@@ -1,0 +1,17 @@
+EngineDriver configureFaulhaberEngine(){
+        
+        int comPort = this.configuration.Equipment.Faulhaber_1.Com.value.AsString().AsInt();
+        int baudRate = this.configuration.Equipment.Faulhaber_1.Baudrate.value.AsString().AsInt();
+        int dataBits = this.configuration.Equipment.Faulhaber_1.DataBits.value.AsString().AsInt();
+        string parityString = this.configuration.Equipment.Faulhaber_1.Parity.value.AsString();
+        int parity;
+       
+        int inBuffSize = this.configuration.Equipment.Faulhaber_1.InputBufferSize.value.AsString().AsInt();
+        int outBuffSize = this.configuration.Equipment.Faulhaber_1.OutputBufferSize.value.AsString().AsInt();
+        int comConfig[] = [comPort, baudRate, dataBits, parity, stopbit, inBuffSize, outBuffSize];
+        string framingConfiguration[] = ["", "\x0d", "", "\x0d"];
+
+        EngineComInterface mci = EngineComInterface.New(comConfig, framingConfiguration);
+        int feedbackResolution = this.configuration.Equipment.Faulhaber_1.FeedbackResolution.value.AsString().AsInt();
+        return FaulhaberEngineDriver.New(mci, feedbackResolution);
+    }

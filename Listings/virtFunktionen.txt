@@ -1,0 +1,5 @@
+   virtual void InitImplementation();
+   virtual void CloseImplementation();
+   virtual void SendCommandImplementation(string command);
+   virtual void WriteBaudrateImplementation(int baudrate);
+   virtual void EnableDriveImplementation();

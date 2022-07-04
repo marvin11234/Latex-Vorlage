@@ -1,0 +1,351 @@
+ITEL version 2.0
+
+//*****************************************************************************
+//!
+//! Tools module for some helper functions
+//!
+//! Functions: 
+//!   DH_UnixTimeStampToTime();
+//!   DH_TimeToUnixTimeStamp();
+//!   DH_IntToHex();
+//!   DH_IntArrayToHex();
+//!   DH_SetBitStateByte();
+//!   DH_GetBitStateByte();
+//!   DH_AsIntWithComplement();
+//!   
+//! Private functions:
+//!   GetUnixTimeStampEpoch();   
+//!
+//*****************************************************************************
+
+//*****************************************************************************
+//!
+//! \brief    GetUnixTimeStampEpoch    
+//!
+//!  Returns the unix timestamp epoch (01.01.1970 00:00:00) as time object
+//!
+//! \param    
+//! \returns  time object of unix timestamp epoch
+//!
+//*****************************************************************************
+time GetUnixTimeStampEpoch()
+{
+   const time epoch;
+   // start unix timestamp (epoch)
+   epoch.Set(1970,01,01,00,00,00);
+   return epoch;
+}
+//*****************************************************************************
+//!
+//! \brief    DH_TimeStampToTime    
+//!
+//!  Converts a integer (4 byte value) with unix timestamp into a time object
+//!
+//! \param    unixTimeStamp
+//! \returns  time object of timestamp array
+//!
+//*****************************************************************************
+public time DH_UnixTimeStampToTime(int[0..0x7FFFFFFF] unixTimeStamp)
+{
+   int[0..0x7FFFFFFF] timeStampInt;
+   time timeStamp;
+   int days;
+   int hours;
+   int minutes;
+   int seconds;
+  
+   timeStamp = GetUnixTimeStampEpoch();
+   timeStampInt = unixTimeStamp;
+   
+   // add days   
+   days = timeStampInt / 60 / 60 / 24;
+   timeStamp.AddDays(days);
+   timeStampInt = timeStampInt - (days * 60 * 60 * 24);
+   
+   // add hours   
+   hours = timeStampInt / 60 / 60;
+   timeStamp.AddHours(hours);
+   timeStampInt = timeStampInt - (hours * 60 * 60);
+   
+   // add minutes   
+   minutes = timeStampInt / 60;
+   timeStamp.AddMinutes(minutes);
+   timeStampInt = timeStampInt - (minutes * 60);
+   
+   // add seconds   
+   seconds = timeStampInt;
+   timeStamp.AddSeconds(seconds);
+   
+   return timeStamp;
+}
+//*****************************************************************************
+//!
+//! \brief    DH_TimeStampToTime    
+//!
+//!  Converts a 4 byte array with unix timestamp into a time object
+//!
+//! \param    unixTimeStampArray
+//! \returns  time object of timestamp array
+//!
+//*****************************************************************************
+public time DH_UnixTimeStampToTime(int[0..255] unixTimeStampArray[4])
+{
+   int[0..0x7FFFFFFF] timeStampInt;
+   
+   // convert bytes to int
+   timeStampInt = unixTimeStampArray[0];
+   timeStampInt = timeStampInt << 8;
+   timeStampInt = timeStampInt + unixTimeStampArray[1];
+   timeStampInt = timeStampInt << 8;
+   timeStampInt = timeStampInt + unixTimeStampArray[2];
+   timeStampInt = timeStampInt << 8;
+   timeStampInt = timeStampInt + unixTimeStampArray[3];
+   
+   return DH_UnixTimeStampToTime(timeStampInt);
+}   
+//*****************************************************************************
+//!
+//! \brief    DH_TimeToUnixTimeStamp    
+//!
+//!  Converts a time object into a integer (4 byte value) with unix timestamp 
+//!
+//! \param    time object do convert
+//! \returns  STD timestamp as integer
+//!
+//*****************************************************************************
+public int[0..0x7FFFFFFF] DH_TimeToUnixTimeStamp(time timeObjectToConvert)
+{
+   int secs;
+   secs = timeObjectToConvert.SecondsSince(GetUnixTimeStampEpoch());
+   
+   return secs;
+}
+//*****************************************************************************
+//!
+//! \brief    DH_TimeToUnixTimeStamp    
+//!
+//! Converts a time object into an integer array with 4 bytes representing
+//! the unix timestamp. 
+//!
+//! \param    time object to convert
+//! \returns  STD timestamp as integer array
+//!
+//*****************************************************************************
+public int[0..255]:[4] DH_TimeToUnixTimeStampArray(time timeObjectToConvert)
+{
+   int[0..0x7FFFFFFF] tempVal;
+   int[0..255] retVal[4];
+   
+   tempVal = timeObjectToConvert.SecondsSinceEpoch();
+   
+   retVal[0] = (tempVal >> 24) & 0xFF; 
+   retVal[1] = (tempVal >> 16) & 0xFF;
+   retVal[2] = (tempVal >> 8) & 0xFF;
+   retVal[3] = (tempVal) & 0xFF;
+   
+   return retVal;
+}
+//*****************************************************************************
+//!
+//! \brief    DH_IntToHex    
+//!
+//!  Format a int into a hex string. (defaluts are for one byte)  
+//!
+//! \param    value, width and base
+//! \returns  formated string
+//!
+//*****************************************************************************
+public string DH_IntToHex(int value, int width = 0, bool showBase = true)
+{
+   string temp;
+   Data_Format format;
+   
+   format = { Data.baseHex => baseField, 
+              false => showBase,
+              true => upperCase,
+              2 => width,
+              "0" => fill };
+   
+   if (width > 0) { format.width = width; }
+   
+   temp = value.Format(format);
+
+   if (showBase)  
+   {
+      temp = "0x" + temp;   
+   }
+
+   return temp;
+}
+//*****************************************************************************
+//!
+//! \brief    DH_IntArrayToHex    
+//!
+//!  Format a int array into a hex string. (defaluts for an array of bytes)  
+//!
+//! \param    values, seperator, width and base 
+//! \returns  formated string
+//!
+//*****************************************************************************
+public string DH_IntArrayToHex(int values[], string seperator = " ", int width = 2, bool showBase = true)
+{
+   string temp = "";
+   string singleVal;
+   
+   Data_Format format;
+   
+   format = { Data.baseHex => baseField, 
+              false => showBase,
+              true => upperCase,
+              "0" => fill };
+   
+   format.width = width;
+   
+   for (int i = 0; i < values.Size(); i++)
+   {
+      singleVal = values[i].Format(format);
+      
+      if (showBase)  
+      {
+         singleVal = "0x" + singleVal;   
+      }
+      
+      if (i < (values.Size()-1))
+      {
+         singleVal = singleVal + seperator;
+      }
+      temp = temp + singleVal;
+   }
+   return temp;
+}
+//*****************************************************************************
+//!
+//! \brief   DH_SetBitStateByte
+//!
+//!  Set or clear a bit of a one Byte Value.
+//!
+//! \param    Input byte, number of the bit wich should be used and status to be set (true => 1, or false => 0)
+//!           Allowed values for bitNo is from Bit0 up to Bit7 
+//! \returns  the input byte with the manipulated bit state included   
+//!
+//*****************************************************************************
+public int [0..255] DH_SetBitStateByte(int [0..255] input, int [0..7] bitNo, bool state)
+{
+   int bitVal;
+   int [0..255] output;
+   
+   bitVal = Math.RoundToInt(2**bitNo);
+   if (state) { output = input | bitVal;          }
+   else       { output = input & (0xFF - bitVal); }
+   
+   return output;        
+}
+//*****************************************************************************
+//!
+//! \brief   DH_GetBitStateByte 
+//!
+//!  Get the bit state of a one Byte Value.
+//!
+//! \param    Input byte, number of the bit wich should be used
+//!           Allowed values for bitNo is from Bit0 up to Bit7
+//! \returns  status of the selected bit   
+//!
+//*****************************************************************************
+public bool DH_GetBitStateByte(int [0..255] input, int [0..7] bitNo)
+{
+   int bitVal;
+   bool retVal;
+      
+   bitVal = Math.RoundToInt(2**bitNo);
+   if ((input & bitVal) == bitVal) { retVal = true;  }
+   else                            { retVal = false; }
+   
+   return retVal;        
+}
+//*****************************************************************************
+//!
+//! \brief    DH_AsIntWithComplement
+//!
+//!  Converts the string into an integer number with complement. 
+//!
+//! \param    input string to convert
+//! \returns  number determined from string
+//!
+//*****************************************************************************
+public int DH_AsIntWithComplement(string s)
+{
+   bigint b = s.AsBigInt();
+  
+   if(b > 0x7FFFFFFF) 
+   {
+      b = b - 0x100000000I;
+   }
+   return b.AsInt();  
+}
+//*****************************************************************************
+//!
+//! \brief    DH_AsIntWithComplementHex
+//!
+//!  Converts the string with hex numbers into an integer number with complement. 
+//!
+//! \param    input string to convert
+//! \returns  number determined from string
+//!
+//*****************************************************************************
+public int DH_AsIntWithComplementHex(string s)
+{
+   bigint b = s.AsBigInt(16);
+  
+   if(b > 0x7FFFFFFF) 
+   {
+      b = b - 0x100000000I;
+   }
+   return b.AsInt();  
+}
+//*****************************************************************************
+//!
+//! \brief    DH_SaveArraysToFile
+//!
+//!  Save one or more array with values into a json formatted file. 
+//!
+//! \param    input list of data arrays, filename, headers, compactMode and storageIdentifier
+//!           if compactMode = false => json file is for a better human readability but bigger filesize
+//! \returns  -  
+//!
+//*****************************************************************************
+public void DH_SaveArraysToFile(variant dataToSave[], string headers[], string fileName, bool compactMode = true, int storageIdentifier = File.local)
+{
+   variant root;
+   int jsonMode;
+   int cnt = 0;
+
+   if (compactMode) { jsonMode = JsonDocument.compact; }
+   else             { jsonMode = JsonDocument.indented; }
+   
+   if (headers.Size() != dataToSave.Size())
+   {
+      Ctrl.Abort(<"Anazhl Daten-Arrays und Header sind unterschiedlich!" => "de-DE", "Data-array count and header count not identical!" => "en-US">, Ctrl.systemFail, Ctrl.confirm);
+   }
+   
+   foreach element (dataToSave)
+   {
+      root.SetMember(headers[cnt], element);
+      cnt++;
+   }
+
+   JsonDocument doc = JsonDocument.New(root);
+   doc.Write(storageIdentifier, fileName, jsonMode);
+}
+//*****************************************************************************
+//!
+//! \brief    DH_Log2
+//!
+//!  Implementation of Log2. 
+//!
+//! \returns  Log2 of the value 
+//!
+//*****************************************************************************
+public float DH_Log2(float value)
+{
+   return Math.Log(value) / Math.Log(2);
+}

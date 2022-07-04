@@ -1,0 +1,39 @@
+ITEL version 3.0
+require "lib:global:Div07/DataHelpers/DataHelpers.item"
+
+public struct HiperfaceConfig
+{
+   int id;
+   int comNo;
+   int hiperfaceAddress;
+   int signToSignTimeout;
+};
+public struct Hiperface_Data
+{
+   int deviceAddress;
+   bool warning;
+   int code0;
+   int sendBuffer[];
+   int readBuffer[];
+   DriverGroup driverGroup;
+   ComInterfaceDriver interface;
+   int signToSignTimeout;
+};
+
+public struct Hiperface_Command
+   {
+      int[0..255] command;
+      int[0..255] subCommand;
+      int[0..255] address;
+      bool code0;
+      int data[];
+      int dataValues[];
+      bool responseRequired;
+
+   };
+public struct SerialNo
+{
+    string dateCode;
+    string firmwareVersion;
+    string firmwareDate;
+};

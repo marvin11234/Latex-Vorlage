@@ -1,0 +1,167 @@
+ITEL version 3.0
+require "HiperfaceBaseFunctions.item"
+require "HiperfaceStructs.item"
+require "file:testCases:SYS/Datalog_Handler.item"
+
+public class HiperfaceUserFunctions{
+    bool initDone = false;
+    HiperfaceBaseFunctions hiperfaceBaseFunctions = HiperfaceBaseFunctions.New();
+
+//*********************************************************************************************
+//! @brief Initialize the Hiperface interface an read the config Data
+//! 
+//! 
+//*********************************************************************************************
+    public void init(){
+
+        int configDataStorage;
+        variant testCaseConfig;
+        string configDataEntry = "File.configData";
+        int configDataId = configDataEntry.AsIdentifier();
+        configDataStorage = configDataId;
+
+        JsonDocument doc = JsonDocument.Parse(configDataStorage, "LocalConfig.json");
+        testCaseConfig = doc.RootValue();
+
+        int com = testCaseConfig.equipment.icpCon_1.com.value.AsString().AsInt();
+
+        HiperfaceConfig hfcfg;
+        hfcfg = { 1342177736 => id , com => comNo , 0x40 =>  hiperfaceAddress, 10000 => signToSignTimeout};
+        this.hiperfaceBaseFunctions.init(hfcfg);
+        this.hiperfaceBaseFunctions.HiperfaceEncoderImp_Init(HiperfaceID);
+        this.initDone = true;
+    }
+
+
+//*********************************************************************************************
+//! @brief Reads the Typelabel of the Encoder /MFB
+//! 
+//! 
+//*********************************************************************************************
+    public void checkTypeLabel(){
+        if(this.initDone == false){
+            this.init();
+            bigint typeLabel = this.hiperfaceBaseFunctions.UUT_RCheckTypeLabel();
+        }
+        else{
+            bigint typeLabel = this.hiperfaceBaseFunctions.UUT_RCheckTypeLabel();
+        }
+
+    }
+//*********************************************************************************************
+//! @brief Checks the Gerneral User Cmds e.g. 42h, 43h, ...
+//! 
+//! 
+//*********************************************************************************************
+    public void checkGeneralUserCmd(){
+       if(this.initDone == false){
+            this.init();
+            bigint return1 =  this.hiperfaceBaseFunctions.UUT_RPosition();
+            int return2[] =  this.hiperfaceBaseFunctions.UUT_WPosition(1040); //big int als Übergabewert definieren !!!
+            bigint return3 =  this.hiperfaceBaseFunctions.UUT_RAnalogValue(48);
+            bigint return4 =  this.hiperfaceBaseFunctions.UUT_RStatus(); 
+            this.hiperfaceBaseFunctions.UUT_Reset();
+            SerialNo serialNo;
+            serialNo =  this.hiperfaceBaseFunctions.UUT_SerialVersion();
+            bigint return6 =  this.hiperfaceBaseFunctions.UUT_RCounter();
+            this.hiperfaceBaseFunctions.UUT_WIncCounter();
+            this.hiperfaceBaseFunctions.UUT_WEraseCounter();
+        }
+        else{
+            bigint return1 =  this.hiperfaceBaseFunctions.UUT_RPosition();
+            int return2[] =  this.hiperfaceBaseFunctions.UUT_WPosition(1040); //big int als Übergabewert definieren !!!
+            bigint return3 =  this.hiperfaceBaseFunctions.UUT_RAnalogValue(48);
+            bigint return4 =  this.hiperfaceBaseFunctions.UUT_RStatus(); 
+            this.hiperfaceBaseFunctions.UUT_Reset();
+            SerialNo serialNo;
+            serialNo =  this.hiperfaceBaseFunctions.UUT_SerialVersion();
+            bigint return6 =  this.hiperfaceBaseFunctions.UUT_RCounter();
+            this.hiperfaceBaseFunctions.UUT_WIncCounter();
+            this.hiperfaceBaseFunctions.UUT_WEraseCounter();
+
+        }
+    }
+//*********************************************************************************************
+//! @brief Checks the actual encoder Status
+//!                   00h NONE , 01h REQUIRED , 02h CONFIGURING , 03h NOTVALIDATED
+//!                   04h REJECTED , 05h VALID , 06h CAPABILITYERROR, 07h VALIDATING
+//! 
+//! 
+//*********************************************************************************************
+    public void checkStatus(){
+       if(this.initDone == false){
+            this.init();
+            bigint status = this.hiperfaceBaseFunctions.UUT_RStatus();
+        }
+        else{
+            bigint status = this.hiperfaceBaseFunctions.UUT_RStatus();
+        }
+
+    }
+
+//*********************************************************************************************
+//! @brief Checks the Supply Voltage Measurement
+//! 
+//! 
+//*********************************************************************************************
+    public void checkVoltage(){
+       if(this.initDone == false){
+            this.init();
+            int supplyVoltage = this.hiperfaceBaseFunctions.UUT_RAnalogValue(0x90);
+        }
+        else{
+            int supplyVoltage = this.hiperfaceBaseFunctions.UUT_RAnalogValue(0x90);
+        }
+
+    }
+//*********************************************************************************************
+//! @brief Checks the LED current which is an indicator for the measurement quality
+//! 
+//! 
+//*********************************************************************************************
+    public void checkLedCurrent(){
+       if(this.initDone == false){
+            this.init();
+            int ledCurrent = this.hiperfaceBaseFunctions.UUT_RAnalogValue(0x50);
+        }
+        else{
+            int ledCurrent = this.hiperfaceBaseFunctions.UUT_RAnalogValue(0x50);
+        }
+
+    }
+//*********************************************************************************************
+//! @brief Checks the Hiperface Config
+//! 
+//! 
+//*********************************************************************************************
+    public void checkHiperfaceConfig(){
+       if(this.initDone == false){
+            this.init();
+            //this.hiperfaceBaseFunctions.UUT_VerifyConfig(); // int array als Übergabwert !!!
+        }
+        else{
+            //this.hiperfaceBaseFunctions.UUT_VerifyConfig(); // int array als Übergabwert !!!
+        }
+
+    }
+
+//*********************************************************************************************
+//! @brief Set a new Hiperface config
+//! 
+//! 
+//*********************************************************************************************
+    public void SetHiperfaceConfig(){
+       if(this.initDone == false){
+            this.init();
+            this.hiperfaceBaseFunctions.UUT_EnterInternal();
+            this.hiperfaceBaseFunctions.UUT_LeaveInternal();
+        }
+        else{
+            this.hiperfaceBaseFunctions.UUT_EnterInternal();
+            this.hiperfaceBaseFunctions.UUT_LeaveInternal();
+        }
+
+    }
+
+
+};

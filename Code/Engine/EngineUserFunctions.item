@@ -1,0 +1,25 @@
+ITEL version 3.0
+require "EngineBaseFunctions.item"
+require "EngineDriver.item"
+
+public class EngineUserFunctions{
+
+EngineDriver engineDriver;
+
+EngineBaseFunctions enginebaseFunctions = EngineBaseFunctions.New();
+
+public void Rotate(int speed){
+
+    this.engineDriver.EnableDrive();
+    this.engineDriver.Rotate(speed);
+}
+
+public void setup(){
+    this.engineDriver = this.enginebaseFunctions.setupEngine("Faulhaber");
+}
+public void tearDown(){
+    this.baseFunctions.tearDownEngine(this.engineDriver);
+}
+
+
+};

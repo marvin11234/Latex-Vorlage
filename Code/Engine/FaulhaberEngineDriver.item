@@ -1,0 +1,239 @@
+ITEL version 3.0
+
+require "EngineDriver.item"
+require "EngineComInterface.item"
+
+public class FaulhaberEngineDriver: public EngineDriver {
+
+   EngineComInterface communicationInterface;
+   int resolution;
+
+
+   public New(EngineComInterface mci, int res): base.New() {
+      this.communicationInterface = mci;
+      this.resolution = res;
+      Gui.MessageBox("im a FaulhabernEgineDriver");  
+   }
+
+   
+      
+   // virtual methods
+   // ----------------------------------------------------------------------------
+   virtual void InitImplementation() {
+      this.communicationInterface.Init();
+   }
+
+   virtual void CloseImplementation() {
+      this.communicationInterface.Disconnect();
+   }
+
+   virtual void SendCommandImplementation(string command) {
+      this.communicationInterface.Write(command);
+      Std.Print("Command response from Faulhaber: " + this.communicationInterface.Read() + "\n");
+   }
+   
+   virtual void WriteBaudrateImplementation(int baudrate) {
+      string cmdValue = baudrate.Format();
+
+      this.communicationInterface.Write("BAUD" + cmdValue);
+      Std.Sleep(500);
+   }
+
+   virtual void EnableDriveImplementation() {
+      string response;
+
+      this.communicationInterface.Write("EN");
+      response = this.communicationInterface.Read();
+
+      if (response != "OK") {
+         locstr msg = <"EnableDrive() => " + response => "en-US",
+                       "EnableDrive() => " + response => "de-DE">;  
+         Ctrl.Abort(msg , Ctrl.systemFail);
+      }
+   }
+
+   virtual void DisableDriveImplementation() {
+      this.communicationInterface.Write("DI");
+      string response = this.communicationInterface.Read();
+
+      if (response != "OK") {
+         locstr msg = <"DisableDrive() => " + response => "en-US",
+                       "DisableDrive() => " + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);
+      }
+   }
+
+   virtual void ResetDriveImplementation() {
+      this.communicationInterface.Write("RESET");
+      Std.Sleep(500);
+      string response = this.communicationInterface.Read();
+      
+      Std.Print(response + " resetted.\n");
+   }
+
+   virtual float GetSpeedImplementation() {
+      string s_speed;
+      float speed = 0;
+
+      this.communicationInterface.Write("GN");
+      s_speed = this.communicationInterface.Read();
+      
+      try {
+         speed = s_speed.AsFloat();
+      } catch (Std_ItelEx e) {
+         locstr msg = <"GetSpeed() => " + e.msg.Format() => "en-US",
+                       "GetSpeed() => " + e.msg.Format() => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail); 
+      }
+      return speed;
+   }
+
+   virtual float GetPositionImplementation() {
+      string s_position;
+      float position;
+      
+      this.communicationInterface.Write("POS");
+      s_position = this.communicationInterface.Read();
+
+      try {
+         position = s_position.AsFloat() / this.resolution;
+      } catch (Std_ItelEx e) {
+         locstr msg = <"GetPosition() => "+e.msg.Format() => "en-US",
+                       "GetPosition() => "+e.msg.Format() => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail); 
+      }
+      return position;
+   }
+
+   virtual void RotateImplementation(int speed) {
+      this.EnableDrive();
+
+      string cmdValue = speed.Format();
+      this.communicationInterface.Write("V" + cmdValue);
+      string response = this.communicationInterface.Read();
+
+      if (response != "OK") {
+         locstr msg = <"Rotate()" + response => "en-US",
+                       "Rotate()" + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);
+      }
+   }
+
+   virtual void RotateStopImplementation() {
+      this.communicationInterface.Write("V0");
+      string response = this.communicationInterface.Read();
+
+      if(response != "OK") {
+         locstr msg = <"RotateStop()" + response => "en-US",
+                       "RotateStop()" + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);
+      }
+
+      float speed = this.GetSpeed();
+      while (speed > 5 || speed < -5) {
+         Std.Sleep(100);
+         speed = this.GetSpeed();
+      }
+      //Std.Print("Motor stopped.\n");
+   }
+
+   virtual void StopPositioningImplementation() {
+      this.RotateStop();
+   }
+
+   virtual bool InPositionImplementation() {
+      bool inPosition = false;
+
+      this.communicationInterface.Write("OST");
+      string response = this.communicationInterface.Read();
+
+      int int_response = response.AsInt();
+      if((int_response & 65536) == 65536){
+         inPosition = true;
+      }
+      return inPosition;
+   }
+
+   // Faulhaber specific methods
+   //-----------------------------------------------------------------------
+   public void SetMaxSpeed(int speed){
+      string cmdValue = speed.Format();
+
+      this.communicationInterface.Write("SP" + cmdValue);
+      string response = this.communicationInterface.Read();
+
+      if (response != "OK") {
+         locstr msg = <"SetMaxSpeed() => " + response => "en-US",
+                       "SetMaxSpeed() => " + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail); 
+      }
+   }
+
+   public void StartPositioning(string posMode, float destination, int speed, int acc, int dec) {
+      this.SetDestinationPosition(destination, posMode);
+      this.SetAcceleration(acc);
+      this.SetDeceleration(dec);
+      this.SetMaxSpeed(speed);
+      this.EnableDrive();
+
+      this.communicationInterface.Write("M");
+      string response = this.communicationInterface.Read();
+
+      if (response != "OK") {
+         locstr msg = <"StertPositioning() => " + response => "en-US",
+                       "StartPositioning() => " + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);
+      }
+   }
+
+   public void SetAcceleration(int acceleration) {
+      string cmdValue = acceleration.Format();
+
+      this.communicationInterface.Write("AC" + cmdValue);
+      string response = this.communicationInterface.Read();
+
+      if (response != "OK") {
+         locstr msg = <"SetAcceleration() -> " + response => "en-US",
+                       "SetAcceleration() -> " + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail); 
+      }
+   }
+
+   public void SetDeceleration(int deceleration) {
+      string cmdValue = deceleration.Format();
+      this.communicationInterface.Write("DEC" + cmdValue);
+      string response = this.communicationInterface.Read();
+
+      if (response != "OK") {
+         locstr msg = <"SetDeceleration() -> " + response => "en-US",
+                       "SetDeceleration() -> " + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);
+      }
+   }
+
+   // Non public methods
+   //----------------------------------------------------------------------
+   void SetDestinationPosition(float position, string positionMode) {
+      int cmdValue = Math.RoundToInt(position * this.resolution);
+      string cmd;
+
+      if(positionMode == "absolut"){
+         cmd = "LA";
+      }
+      elseif(positionMode == "relative"){
+         cmd = "LR";
+      }
+      else{
+         
+      }
+
+      this.communicationInterface.Write(cmd + cmdValue.Format());
+      string response = this.communicationInterface.Read();
+
+      if (response != "OK") {
+         locstr msg = <"SetDestination() => " + response => "en-US",
+                       "SetDestination() => " + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);
+      } 
+   }
+};

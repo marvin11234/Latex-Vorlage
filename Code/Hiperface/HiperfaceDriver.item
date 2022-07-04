@@ -1,0 +1,278 @@
+ITEL version 3.0
+require "HiperfaceComInterface.item"
+require "HiperfaceStructs.item"
+
+
+
+
+public class HiperfaceDriver{
+
+
+      
+   HiperfaceComInterface hiperfaceCominterface = HiperfaceComInterface.New();
+   
+
+//*********************************************************************************************
+//! @brief Initialize 
+//!
+//! 
+//*********************************************************************************************
+   public void init(HiperfaceConfig config){
+
+      this.hiperfaceCominterface.Hiperface_Init(config);
+   }
+   
+//*********************************************************************************************
+//! @brief Main function to execute Hiperface Cmds  
+//! @param [in] id : int that indicates the device id
+//! @param [in] cmd : struct of tpe Hiperface_Command that includes the command
+//! @param [out] result : int array that includes return value of the Hiperface cmd if there is any
+//*********************************************************************************************
+   public optional int:[] Hiperface_Execute(int id, Hiperface_Command cmd, int timeout = 250)
+   {
+      int send[];
+      int result[];
+      int receive[];
+
+      send = this.Hiperface_CalcSendData(id, cmd);
+      this.Hiperface_Send(id, send);
+      if (cmd.responseRequired) {
+         receive = this.Hiperface_Read(id, 256, timeout);
+         if (3 > receive.Size()) {
+            const locstr msg = <"Hiperface: Zu wenige Daten empfangen!" => "de-DE",
+                              "Hiperface: too less data received!" => "en-US">;
+            Ctrl.Abort(msg, Ctrl.uutFail);
+
+         }
+         if (cmd.command != 0x50) {
+            this.Hiperface_CheckError(receive);
+
+         }
+         this.Hiperface_CheckCommand(send, receive);
+         this.Hiperface_CheckChecksum(receive);
+
+         Hiperface_Data test = this.hiperfaceCominterface.getHiperfaceData(id);
+         test.warning = this.Hiperface_CheckWarning(receive);
+         this.hiperfaceCominterface.setHiperfaceData(id, test);
+
+         if (cmd.subCommand.IsDef()) {
+            result = receive[3..(receive.Size() - 2)];
+
+         }
+         else {
+            if (3 < receive.Size()) {
+               result = receive[2..(receive.Size() - 2)];
+
+            }
+
+         }
+
+      }
+      return result;
+
+   }
+
+//*********************************************************************************************
+//! @brief function is called from Hiperface_execute main to calculate the SendData  
+//! @param [in] id : int that indicates the device id
+//! @param [in] cmd : struct of tpe Hiperface_Command that includes the command
+//! @param [out] result : int array that includes return complete data to be send
+//*********************************************************************************************
+   int:[] Hiperface_CalcSendData(int id, Hiperface_Command cmd)
+   {
+      
+      int result[];
+
+      if (cmd.address.IsDef()) {
+         result.Push(cmd.address);
+
+      }
+      else {
+         Hiperface_Data hiperfaceData = this.hiperfaceCominterface.getHiperfaceData(id);
+         result.Push(hiperfaceData.deviceAddress);
+      }
+      result.Push(cmd.command);
+      if (cmd.subCommand.IsDef()) {
+         result.Push(cmd.subCommand);
+
+      }
+      for (int i = 0; i < cmd.data.Size(); i++) {
+         result.Push(cmd.data[i]);
+
+      }
+      if (cmd.code0.IsDef()) {
+         if (true == cmd.code0) {
+            Hiperface_Data test = this.hiperfaceCominterface.getHiperfaceData(id);
+            result.Push(test.code0);
+
+            }
+
+      }
+         for (int i = 0; i < cmd.dataValues.Size(); i++) {
+            result.Push(cmd.dataValues[i]);
+
+         }
+
+      result.Push(this.Hiperface_CalculateChecksum(result));
+
+      return result;
+
+   }
+//*********************************************************************************************
+//! @brief function is called from HiHiperface_CalcSendData to calculate the Checksum  
+//! @param [in] buffer[] : int array that includes the buffer
+//! @param [out] checksum : int  that includes  (checksum) of the calculation
+//*********************************************************************************************
+   int Hiperface_CalculateChecksum(int buffer[])
+   {
+      int checkSum = 0x00;
+
+      foreach val (buffer)
+      {
+         checkSum = checkSum ^ val;
+      }
+
+      return checkSum;
+   }
+
+//*********************************************************************************************
+//! \brief  Hiperface_Error
+//!
+//! check errorCheck if the Command Byte is equal to the sended Command.
+//*********************************************************************************************
+   void Hiperface_CheckError(int readBuffer[])
+   {
+      int[3..] size = readBuffer.Size();
+      bool result;
+      int checkSum = readBuffer.Last();
+      int calculatedChecksum = this.Hiperface_CalculateChecksum(readBuffer[0 .. (readBuffer.Size()-2)]);
+
+      result = checkSum == calculatedChecksum;
+
+   }
+//*********************************************************************************************
+//! \brief  Hiperface_CheckCommand
+//!
+//! Check if the Command Byte is equal to the sended Command.
+//*********************************************************************************************
+   void Hiperface_CheckCommand(int sendBuffer[], int readBuffer[])
+   {
+         // check that command was successfully executed
+         if ((readBuffer[1] & 0x7F) != sendBuffer[1])
+         {
+            string out = "read Buffer: %1";
+            string msg3 = out.Arg(readBuffer[1]); 
+            Std.Print(msg3); 
+
+            string ou = "send Buffer: %1";
+            string msg4 = ou.Arg(sendBuffer[1]); 
+            Std.Print(msg4); 
+            const locstr msg = <"Hiperface: Fehler beim Ausfuehren des Kommandos!" => "de-DE",
+                              "Hiperface: Error occoured while executing command!" => "en-US">;
+            Ctrl.Abort(msg, Ctrl.uutFail);
+
+         }
+
+   }
+
+//*********************************************************************************************
+//! \brief  Hiperface_CheckChecksum
+//!
+//! Check the last Byte of the buffer if it is an XOR checksum of the rest.
+//*********************************************************************************************
+   void Hiperface_CheckChecksum(int readBuffer[])
+   {
+      int[3..] size = readBuffer.Size();
+      bool result;
+      int checkSum = readBuffer.Last();
+      int calculatedChecksum = this.Hiperface_CalculateChecksum(readBuffer[0 .. (readBuffer.Size()-2)]);
+
+      if (checkSum != calculatedChecksum) {
+         const locstr msg = <"Hiperface: Fehler in der Checksumme" => "de-DE",
+                           "Hiperface: Error within the check sum" => "en-US">;
+         Ctrl.Abort(msg, Ctrl.uutFail);
+
+      }
+
+   }
+
+//*********************************************************************************************
+//! \brief  Hiperface_CheckWarning
+//!
+//! Check if the warning bit is set.
+//*********************************************************************************************
+   bool Hiperface_CheckWarning(int readBuffer[])
+   {
+      int[3..] size = readBuffer.Size();
+      bool result;
+
+      result = (readBuffer[0] & 0x80) != 0;
+
+      return result;
+
+   }
+   
+//*********************************************************************************************
+//! \brief   Hiperface_Execute
+//!
+//! Sends a command and returns the answer
+//!
+//! \param   buffer to be send
+//! \return  received buffer
+//*********************************************************************************************
+   public optional int:[] Hiperface_EmptyReadBuffer(int id, int timeout = 250)
+   {
+      int send[];
+      int result[];
+      int receive[];
+
+      receive = this.Hiperface_Read(id, 256, timeout);
+
+      return result;
+   }
+
+//*********************************************************************************************
+//! \brief   Hiperface_Send
+//!
+//! Send data to device.
+//!
+//! \param   identifier of the used hiperface device
+//! \param   buffer to be send
+//! \return  optional count of bytes was sent
+//*********************************************************************************************
+   public void Hiperface_Send(int id, int buffer[])
+   {
+      Hiperface_Data hiperfaceData = this.hiperfaceCominterface.getHiperfaceData(id);
+      hiperfaceData.interface.Write(buffer);
+   }
+
+//*********************************************************************************************
+//! \brief   HF_Read
+//!
+//! Read data from device.
+//!
+//! \param   identifier of the used hiperface device
+//! \param   data length to be read
+//! \param   timeout in ms
+//! \return  data that was read
+//*********************************************************************************************
+   public int:[] Hiperface_Read(int id, int length, int timeOut = 250)
+   {
+      int buffer[];
+      bool exit = false;
+      Hiperface_Data hiperfaceData = this.hiperfaceCominterface.getHiperfaceData(id);
+      buffer = hiperfaceData.interface.Read(1, timeOut);
+      while (!exit) {
+         int tmpBuffer[] = hiperfaceData.interface.Read(1, hiperfaceData.signToSignTimeout);
+         if (0 == tmpBuffer.Size()){
+            exit = true;
+         }
+         else {
+            buffer.Push(tmpBuffer);
+         }
+      }
+
+      return buffer;
+   }
+
+};

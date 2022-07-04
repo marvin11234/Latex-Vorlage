@@ -1,0 +1,603 @@
+ITEL version 3.0
+
+require "EngineDriver.item"
+require "EngineComInterface.item"
+
+
+public class MetronixEngineDriver: public EngineDriver {
+   
+   EngineComInterface communicationInterface;
+   
+   public New(EngineComInterface mci): base.New() {
+      this.communicationInterface = mci;
+   }
+
+   // virtual methods
+   // --------------------------------------------------------------------------------
+   virtual void InitImplementation() {
+      this.communicationInterface.Init();
+   }
+
+   virtual void CloseImplementation() {
+      this.communicationInterface.Disconnect();
+   }
+
+   virtual void SendCommandImplementation(string command) {
+      this.communicationInterface.Write(command);
+      Std.Print("Command response: " + this.communicationInterface.Read() + "\n");
+   }
+
+   virtual void WriteBaudrateImplementation(int baudrate) {
+      string cmdValue = baudrate.Format();
+      string cmd = "BAUD";
+      cmd = cmd + cmdValue;
+
+      this.communicationInterface.Write(cmd);
+      Std.Sleep(500);
+   }
+
+   virtual void EnableDriveImplementation() {
+      string cmd = "OW:1:0010:00000001";
+
+      this.communicationInterface.Write(cmd);
+      string response = this.communicationInterface.Read();
+
+      if ("OK!" != response) {
+         locstr msg = <"Drive could not be enabled! ->" + response => "en-US",
+                     "Motor konnte nicht aktiviert werden! -> " + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);        
+      }
+   }
+
+   virtual void DisableDriveImplementation() {
+      string cmd = "OW:1:0010:00000002";
+
+      this.communicationInterface.Write(cmd);
+      string response = this.communicationInterface.Read();
+
+      if ("OK!" != response) {
+         locstr msg = <"DisableDrive() ->" + response => "en-US",
+                       "DisableDrive() -> " + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);        
+      }
+   }
+
+   virtual void ResetDriveImplementation() {
+      string cmd = "RESET!";
+
+      this.communicationInterface.Write(cmd);
+      Std.Sleep(500);
+      string response = this.communicationInterface.Read();
+      bool MessageEnd = false;
+      while(true){
+         response = this.communicationInterface.Read();
+         if(response == "No response"){
+            break;
+         }
+         Std.Print(response + "\n");
+         Std.Sleep(100);
+      }
+
+      Std.Print("Drive resetted!");
+   }
+
+   virtual float GetSpeedImplementation() {
+      string cmd;
+      bigint speed;
+      float result;
+
+      cmd = "OR:017B";
+
+      this.communicationInterface.Write(cmd);
+      string response = this.communicationInterface.Read();
+
+      if ("017B" != response.SubStrLeft(4)) {
+      locstr msg = <"GetSpeed() -> " + response => "en-US",
+                    "GetSpeed() -> " + response => "de-DE">;                                  
+      Ctrl.Abort(msg , Ctrl.systemFail);        
+      }
+      
+      speed = response.SubStrRight(8).AsBigInt(16);
+      if (speed > 0x7FFFFFFF) {
+         speed = speed - 0x100000000I;
+      }
+
+      result = speed / (2 ** 12);
+      return result;
+   }
+
+   virtual float GetPositionImplementation() {
+      bigint revolutions;
+      bigint partOfRevolution;
+      float result;
+
+      this.communicationInterface.Write("OR:01AE");
+      string response = this.communicationInterface.Read();
+
+      if ("01AE" != response.SubStrLeft(4)) {
+         locstr msg = <"GetPosition() -> " + response => "en-US",
+                     "GetPosition() -> " + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);
+      }
+
+      revolutions = response.SubStrRight(8).AsBigInt(16);
+      if (revolutions > 0x7FFFFFFF) {
+         revolutions = revolutions - 0x100000000I;
+      }
+
+      // position within a revolution
+
+      this.communicationInterface.Write("OR:01AF");
+      response = this.communicationInterface.Read();
+
+      if ("01AF" != response.SubStrLeft(4)) {
+         locstr msg = <"GetPosition() -> " + response => "en-US",
+                     "GetPosition() -> " + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);        
+
+      }
+
+      partOfRevolution = response.SubStrRight(8).AsBigInt(16);
+
+      // conversion to data-type
+      result = revolutions + (partOfRevolution / 2**32);
+
+      return result;
+   }
+
+   virtual void RotateImplementation(int speed) {
+      if (this.GetOperationMode() != "omSpeed") {
+         this.SetOperationMode("omSpeed");
+      }
+      this.SetSpeed(speed);
+      this.EnableDrive();
+   }
+
+   virtual void RotateStopImplementation() {
+      float speed;
+
+      this.SetSpeed(0);
+      speed = this.GetSpeed();
+      while (speed > 1 || speed < -1) {
+         Std.Sleep(100);
+         speed = this.GetSpeed();
+      }
+   }
+
+   virtual void StopPositioningImplementation() {
+
+      this.communicationInterface.Write("OW:1:0010:00000025");
+      string response = this.communicationInterface.Read();
+
+      if ("OK!" != response) {
+         locstr msg = <"StopPositioning() -> " + response => "en-US",
+                       "StopPositioning() -> " + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);        
+      }
+      float speed = this.GetSpeed();
+      while (speed > 1 || speed < -1) {
+         Std.Sleep(100);
+         speed = this.GetSpeed();
+      }
+   }
+
+   virtual bool InPositionImplementation() {
+      int status = this.ReadStatus();
+
+      bool result = (0 != (status & 0x08));
+
+      return result;
+   }
+
+   // Metronix specific methods
+   //-----------------------------------------------------------------------
+   public void SetOperationMode(string om) {
+      string cmd = "OW:0234:000000";
+
+      switch (om) {
+         case "omTorque": {
+            cmd = cmd + "04";
+         }
+         case "omSpeed": {
+            cmd = cmd + "08";
+         }
+         case "omPosition": {
+            cmd = cmd + "10";
+         }
+      }
+
+      this.communicationInterface.Write(cmd);
+      string response = this.communicationInterface.Read();
+
+      if ("OK!" != response) {
+      locstr msg = <"SetOperationMode() -> " + response => "en-US",
+                    "SetOperationMode() -> " + response => "de-DE">;                                  
+      Ctrl.Abort(msg , Ctrl.systemFail);        
+      }
+
+      while(this.GetOperationMode() != om) {
+         Std.Sleep(10);
+      }
+   }
+
+   public void StartPositioning(string posMode, string startMode, float destination, float speed, float finalspeed, int acc, int dec) {
+      //Set Pointer to Positioning set 0
+      string cmd = "OW:0555:00000000";
+
+      this.communicationInterface.Write(cmd);
+      string response = this.communicationInterface.Read();
+
+      if ("OK!" != response) {
+         locstr msg = <"Set pointer to positioning set -> " + response => "en-US",
+                       "Set pointer to positioning set -> " + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);
+      }
+
+      this.SetModes(posMode, startMode);      
+      this.SetDestination(destination);
+      this.SetPositionSpeed(speed);
+      this.SetFinalSpeed(finalspeed);
+      this.SetAcceleration(acc);
+      this.SetDeceleration(dec);
+      this.ClearError();
+      this.EnableDrive();
+      if (this.GetOperationMode() != "omPosition") {
+         this.SetOperationMode("omPosition");
+      }
+
+      // Start positioning of positioning set 0
+      // OW:1:0010:XXXX0021
+      // XXXX: Select positioning set to start
+      // 0021: Command to start Positioning
+      cmd = "OW:1:0010:00000021";
+
+      this.communicationInterface.Write(cmd);
+      response = this.communicationInterface.Read();
+
+      if ("OK!" != response) {
+         locstr msg = <"StartPositioning() -> " + response => "en-US",
+                       "StartPositioning() -> " + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);
+      }
+   }
+
+   public void ClearError() {
+      string cmd = "OW:0252:00000001";
+
+      this.communicationInterface.Write(cmd);
+      string response = this.communicationInterface.Read();
+
+      if ("OK!" != response) {
+      locstr msg = <"ClearError() -> " + response => "en-US",
+                    "ClearError() -> " + response => "de-DE">;                                  
+      Ctrl.Abort(msg , Ctrl.systemFail);        
+
+      }
+   }
+
+   // Non public methods
+   //-----------------------------------------------------------------------
+   void SetPositionImplementation(float position) {
+      bool neg = false;
+
+      if(position < 0.0) {
+         position = Math.Abs(position);
+         neg = true;
+      }
+
+      position = position * (2**32);
+
+      bigint value = Math.RoundToBigInt(position);
+
+      if(neg) {
+         value = 0x10000000000000000I - value;
+      }
+
+      string posString = value.Format( { Data.baseHex => baseField,
+                                      false => showBase,
+                                      true => upperCase,
+                                      16 => width,
+                                      "0" => fill } );
+
+      string cmd = "OW:0594:" + posString.SubStrLeft(8);
+      this.communicationInterface.Write(cmd);
+      string response = this.communicationInterface.Read();
+
+      if ("OK!" != response) {
+      locstr msg = <"SetPosition()-> " + response => "en-US",
+                    "SetPosition()-> " + response => "de-DE">;                                  
+      Ctrl.Abort(msg , Ctrl.systemFail);        
+      }
+
+      Std.Sleep(50);
+
+      //position within 1 rotation
+      cmd = "OW:0595" + posString.SubStrRight(8);
+      this.communicationInterface.Write(cmd);
+      response = this.communicationInterface.Read();
+
+      if ("OK!" != response) {
+      locstr msg = <"SetPosition()-> " + response => "en-US",
+                    "SetPosition()-> " + response => "de-DE">;                                  
+      Ctrl.Abort(msg , Ctrl.systemFail);        
+      }
+   }
+
+   string GetOperationMode() {
+      string cmd = "OR:0234";
+      string result;
+
+      this.communicationInterface.Write(cmd);
+      string response = this.communicationInterface.Read();
+
+      if ("0234" != response.SubStrLeft(4)) {
+      locstr msg = <"GetOperationMode() -> " + response => "en-US",
+                    "GetOperationMode() -> " + response => "de-DE">;                                  
+      Ctrl.Abort(msg , Ctrl.systemFail);
+      }
+      
+      switch(response.SubStrRight(8)) {
+         case "00000004": {
+            result = "omTorque";
+         }
+         case "00000008": {
+            result = "omSpeed";
+         }
+         case "00000010": {
+            result = "omPosition";
+         }
+      }
+      return result;
+   }
+
+   int ReadStatus() {
+      int result;
+      string cmd ="OR:1:000F";
+
+      this.communicationInterface.Write(cmd);
+      string response = this.communicationInterface.Read();
+
+      if (4 > response.Size()) {
+         result = 0;
+
+      }
+      else {
+         if ("000F" != response.SubStrLeft(4)) {
+            locstr msg = <"ReadStatus() -> " + response => "en-US",
+                          "ReadStatus() -> " + response => "de-DE">;                                  
+            Ctrl.Abort(msg , Ctrl.systemFail);        
+
+         }
+         string answer = response.SubStrRight(8);
+         result = answer.AsInt(16);
+      }
+      return result;
+   }
+
+   void SetModes(string posMode, string startMode) {
+
+      this.communicationInterface.Write("OR:0590");
+      string response = this.communicationInterface.Read();
+
+      if ("0590" != response.SubStrLeft(4)) {
+         locstr msg = <"SetPositioningModes() -> " + response => "en-US",
+                     "SetPositioningModes() -> " + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);        
+
+      }
+
+      int currentMode = response.SubStrRight(8).AsInt(16) & 0xFF;
+      int newMode = currentMode & 0x3C;
+
+      if (startMode == "ignore") {
+         newMode = newMode | 0x00;  //Start bei laufender Positionierung ignorieren
+      }
+      elseif (startMode == "break") {
+         newMode = newMode | 0x01;  //aktuelle Positionierung unterbrechen
+      }
+      elseif (startMode == "append"){
+         newMode = newMode | 0x02;  //Positionierung an aktuelle anhängen
+      }
+      else {
+         locstr msg = <"\"" + startMode + "\" is no valid start mode!" => "en-US",
+                       "\"" + startMode + "\" ist kein gültiger Startmodus" => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);
+      }
+
+      if (posMode == "absolut") {
+         newMode = newMode | 0x00;  //absolut
+      }
+      elseif (posMode == "relative") {
+         newMode = newMode | 0x40;  //relativ
+      }
+      elseif (posMode == "relativeToTarget"){
+         newMode = newMode | 0x80;  //relativ zum letzten Ziel
+      }
+      else {
+         locstr msg = <"\"" + posMode + "\" is no valid positioning mode!" => "en-US",
+                       "\"" + posMode + "\" ist kein gültiger Positioniermodus" => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);
+      }
+
+      string cmd = "OW:0590:" + newMode.Format( { Data.baseHex => baseField,
+                                          false => showBase,
+                                          true => upperCase,
+                                          8 => width,
+                                          "0" => fill } );
+
+      this.communicationInterface.Write(cmd);
+      response = this.communicationInterface.Read();
+
+      if ("OK!" != response) {
+         locstr msg = <"SetPositioningModes() -> " + response => "en-US",
+                     "SetPositioningModes() -> " + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);        
+      }
+   }
+
+   void SetDestination(float dest) {
+      bool neg = false;
+
+      if(dest < 0.0)
+      {
+         dest = Math.Abs(dest);       
+         neg = true;
+      }
+
+      dest = dest * (2**32);
+
+      bigint value = Math.RoundToBigInt(dest);
+
+      if (neg) 
+      {            
+         value = 0x10000000000000000I - value;
+      }
+
+      string posString = value.Format( { Data.baseHex => baseField,
+                                       false => showBase,
+                                       true => upperCase,
+                                       16 => width,
+                                       "0" => fill } );
+
+      string cmd = "OW:0594:" + posString.SubStrLeft(8);
+
+      this.communicationInterface.Write(cmd);
+      string response = this.communicationInterface.Read();
+
+      if ("OK!" != response) {
+         locstr msg = <"SetDestination()-> " + response => "en-US",
+                     "SetDestination()-> " + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);        
+
+      }
+
+      Std.Sleep(50);
+
+      // position within 1 rotation   
+      cmd = "OW:0595:" + posString.SubStrRight(8);
+
+      this.communicationInterface.Write(cmd);
+      response = this.communicationInterface.Read();
+
+      if ("OK!" != response) {
+         locstr msg = <"SetDestination() -> " + response => "en-US",
+                     "SetDestination() -> " + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);        
+
+      }
+   }
+
+   void SetSpeed(int speed){
+      int iValue = speed;
+      iValue = iValue << 12;
+      string cmdValue = iValue.Format( { Data.baseHex => baseField,
+                                        false => showBase,
+                                        true => upperCase,
+                                        8 => width,
+                                        "0" => fill } );
+      //Set speed for rotation
+      string cmd = "OW:0152:";
+      cmd = cmd + cmdValue;
+
+      this.communicationInterface.Write(cmd);
+      string response = this.communicationInterface.Read();
+
+      if ("OK!" != response) {
+         locstr msg = <"ARS_SetSpeed() -> " + response => "en-US",
+                       "ARS_SetSpeed() -> " + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);        
+      }
+
+      //Set speed for positioning
+      cmd = "OW:0596:";
+      cmd = cmd + cmdValue;
+
+      this.communicationInterface.Write(cmd);
+      response = this.communicationInterface.Read();
+
+      if ("OK!" != response) {
+         locstr msg = <"ARS_SetSpeed() -> " + response => "en-US",
+                       "ARS_SetSpeed() -> " + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);        
+      }
+   }
+
+   void SetAcceleration(int acceleration) {
+      string cmd;
+
+      acceleration = Math.RoundToInt(acceleration * (2 ** 8));
+      cmd = "OW:0598:" + acceleration.Format( { Data.baseHex => baseField,
+                                         false => showBase,
+                                         true => upperCase,
+                                         8 => width,
+                                         "0" => fill } );
+
+      this.communicationInterface.Write(cmd);
+      string response = this.communicationInterface.Read();
+
+      if ("OK!" != response) {
+      locstr msg = <"SetAcceleration() -> " + response => "en-US",
+                    "SetAcceleration() -> " + response => "de-DE">;                                  
+      Ctrl.Abort(msg , Ctrl.systemFail);        
+      }
+   }
+
+   void SetDeceleration(int deceleration) {
+      string cmd;
+
+      deceleration = Math.RoundToInt(deceleration * (2**8));
+      cmd = "OW:0599:" + deceleration.Format( { Data.baseHex => baseField,
+                                         false => showBase,
+                                         true => upperCase,
+                                         8 => width,
+                                         "0" => fill } );
+
+      this.communicationInterface.Write(cmd);
+      string response = this.communicationInterface.Read();
+
+      if ("OK!" != response) {
+      locstr msg = <"SetDeceleration() -> " + response => "en-US",
+                    "SetDeceleration() -> " + response => "de-DE">;                                  
+      Ctrl.Abort(msg , Ctrl.systemFail);        
+      }
+   }
+
+   void SetPositionSpeed(float speed) {
+      speed = speed * (2 ** 12);
+      int value = Math.RoundToInt(speed);
+      string cmd = "OW:0596:" + value.Format( { Data.baseHex => baseField,
+                                       false => showBase,
+                                       true => upperCase,
+                                       8 => width,
+                                       "0" => fill } );
+
+      this.communicationInterface.Write(cmd);
+      string response = this.communicationInterface.Read();
+
+      if ("OK!" != response) {
+         locstr msg = <"SetPositionSpeed() -> " + response => "en-US",
+                     "SetPositionSpeed() -> " + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);        
+      }
+   }
+
+   void SetFinalSpeed(float speed) {
+      speed = speed * (2**12);
+      int value = Math.RoundToInt(speed);
+      string cmd = "OW:0597:" + value.Format( { Data.baseHex => baseField,
+                                       false => showBase,
+                                       true => upperCase,
+                                       8 => width,
+                                       "0" => fill } );
+
+      this.communicationInterface.Write(cmd);
+      string response = this.communicationInterface.Read();
+
+      if ("OK!" != response) {
+         locstr msg = <"SetFinalSpeed() -> " + response => "en-US",
+                     "SetFinalSpeed() -> " + response => "de-DE">;                                  
+         Ctrl.Abort(msg , Ctrl.systemFail);        
+      }
+   }
+   
+};

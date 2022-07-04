@@ -1,0 +1,12 @@
+ virtual void InitImplementation() {
+      this.communicationInterface.Init();
+   }
+
+   virtual void CloseImplementation() {
+      this.communicationInterface.Disconnect();
+   }
+
+   virtual void SendCommandImplementation(string command) {
+      this.communicationInterface.Write(command);
+      Std.Print("Command response from Faulhaber: " + this.communicationInterface.Read() + "\n");
+   }

@@ -1,0 +1,125 @@
+
+\documentclass[12pt,a4paper]{article}
+
+%======Usepackage=========
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman]{babel}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage[square,sort,comma,numbers]{natbib}
+\usepackage{tabularx}
+\usepackage{fancyhdr}
+\usepackage[T1]{fontenc}
+\usepackage{lscape}
+\usepackage[onehalfspacing]{setspace}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage[locale=DE]{siunitx}
+\usepackage[printonlyused]{acronym}
+\usepackage[table]{xcolor}
+\usepackage{eurosym}
+\usepackage{listings}
+\usepackage{pdfpages}
+
+\lstdefinestyle{customc}{
+numbers  = left,
+numberstyle=\tiny,
+numbersep=5pt,
+numberblanklines=true,
+basicstyle=\sffamily\small,
+frame=lines,
+showstringspaces = false,
+  %belowcaptionskip=1\baselineskip,
+  breaklines=true,
+  %frame=L,
+  xleftmargin=\parindent,
+  %language=java,
+  %showstringspaces=false,
+  %basicstyle=\footnotesize\ttfamily,
+  keywordstyle=\bfseries\color{green!40!black},
+  commentstyle=\itshape\color{purple!40!black},
+  identifierstyle=\color{blue},
+  stringstyle=\color{orange},
+  abovecaptionskip=\baselineskip,
+  captionpos=b
+}
+
+%=====Allgemeine Angaben======
+\title{Bachelorarbeit}
+\author{Marvin Böck}
+\date{\today}
+\newcommand{\Autor}{Marvin Böck}
+\newcommand{\MatrikelNummer}{1892597}
+\newcommand{\Kursbezeichnung}{Tinf18B3}
+
+
+\newcommand{\FirmenName}{SICK STEGMANN GmbH}
+\newcommand{\FirmenLogoDeckblatt}{\includegraphics[width=3cm]{img/Sick_logo.png}}
+\newcommand{\FirmenStadt}{Donaueschingen}
+\newcommand{\BetreuerFirma}{Timo Bayer, M.Sc.}
+\newcommand{\BetreuerDHBW}{Prof. Dr. Hans-Jörg Haubner}
+\newcommand{\Titel}{Konzeption und Implementierung einer modularen Testsuite
+zur Automatisierung von Softwaretests}
+\newcommand{\AbgabeDatum}{30.August.2021}
+
+\newcommand{\Dauer}{6. Praxisphase}
+\newcommand{\Abschluss}{Bachelor of Science}
+
+\newcommand{\Studiengang}{Informatik / Informationstechnik}
+
+%======Kopf/Fußzeile=====
+\pagestyle{fancy}
+
+    \lhead{}
+    \chead{}
+    \rhead{\slshape \leftmark}
+
+    \lfoot{}
+    \cfoot{\thepage}
+    \rfoot{}
+    
+    \renewcommand{\headrulewidth}{0.4pt}
+    \renewcommand{\footrulewidth}{0.4pt}
+
+
+\bibliographystyle{IEEEtran}    
+%======Dokument=======
+\begin{document}
+
+%=====deckblatt, Abstrackz/Verzeichnisse======
+\pagestyle{empty}
+\include{01_Titel}
+\pagenumbering{Roman}
+\include{02_Eidesstatt}
+\include{02_Abstrackt}
+\include{03_Verzeichnisse}
+
+%====Text=============
+\newpage
+\pagenumbering{arabic}
+\pagestyle{fancy}
+\newpage
+\include{03_Einleitung}
+\include{031_RelatedWorke}
+\include{04_Grundlagen}
+%\include{05_Anforderungen}
+%\include{06_Anforderungen}
+\include{06_Konzept}
+\include{07_Implementierung}
+\include{08_Evaluation}
+\include{081_Ausblick_Fazit}
+
+\pagenumbering{Roman}
+\include{10_Literatur}
+\include{09_Anhang}
+
+
+
+
+
+
+%=====Anhang====
+
+
+
+\end{document}

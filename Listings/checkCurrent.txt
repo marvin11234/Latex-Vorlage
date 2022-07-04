@@ -1,0 +1,10 @@
+    public void checkLedCurrent(){
+       if(this.initDone == false){
+            this.init();
+            int ledCurrent = this.hiperfaceBaseFunctions.UUT_RAnalogValue(0x50);
+        }
+        else{
+            int ledCurrent = this.hiperfaceBaseFunctions.UUT_RAnalogValue(0x50);
+        }
+
+    }

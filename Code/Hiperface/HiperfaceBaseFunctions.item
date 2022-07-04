@@ -1,0 +1,609 @@
+ITEL version 3.0
+require "HiperfaceCmds.item"
+require "HiperfaceStructs.item"
+
+public class HiperfaceBaseFunctions{
+   int hiperfaceId;
+   HiperfaceCmds hiperfaceCmds = HiperfaceCmds.New(); 
+   
+//*********************************************************************************************
+//! @brief Initialize 
+//!
+//! 
+//*********************************************************************************************
+   public void init(HiperfaceConfig config){
+      this.hiperfaceCmds.init(config);
+   }
+
+//*********************************************************************************************
+//! @brief Initialize the Hiperface Communication
+//! @param [in] communicationId : int that indicates the device id
+//! 
+//*********************************************************************************************
+   public void HiperfaceEncoderImp_Init(int communicationId)
+   {
+      this.hiperfaceId = communicationId;
+   }
+//*********************************************************************************************
+//! @brief SW Reset the Encoder
+//!   
+//! 
+//*********************************************************************************************
+   public void UUT_Reset()
+   { 
+      Hiperface_Command cmd = { 0x53 => command,
+                              false => responseRequired };
+      this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+   }
+//*********************************************************************************************
+//! @brief Reads Status of the Encoder
+//! @retval receive : int for the Status 
+//!                   00h NONE , 01h REQUIRED , 02h CONFIGURING , 03h NOTVALIDATED
+//!                   04h REJECTED , 05h VALID , 06h CAPABILITYERROR, 07h VALIDATING
+ //! 
+//*********************************************************************************************
+   public int UUT_RStatus()
+   {
+      int receive[];
+      Hiperface_Command cmd = { 0x50 => command,
+                                 true => responseRequired };
+      receive =  this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+
+      return receive[0];
+
+   }
+
+//*********************************************************************************************
+//! @brief Reads the Absolute Position
+//! @retval result : bigint which indicates the absolute postion
+//! 
+//*********************************************************************************************   
+   public bigint UUT_RPosition()
+   {
+      bigint result;
+      int receive[];
+      
+      Hiperface_Command cmd = { 0x42 => command,
+                              false => code0,
+                              true => responseRequired };
+
+      receive =  this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+      
+      result = receive[0];
+      result = (result << 8) + receive[1];
+      result = (result << 8) + receive[2];
+      result = (result << 8) + receive[3];
+      
+      return result;
+         
+   }
+
+//*********************************************************************************************
+//! @brief Reads the Absolute Position
+//! @retval 
+//! 
+//*********************************************************************************************
+   public bigint UUT_RPosition_Startup()
+   {
+      bigint result;
+      int receive[];
+      
+      Hiperface_Command cmd = { 0x42 => command,
+                              false => code0,
+                              false => responseRequired };
+
+      this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+      receive = [0,0,0,0];
+      
+      result = receive[0];
+      result = (result << 8) + receive[1];
+      result = (result << 8) + receive[2];
+      result = (result << 8) + receive[3];
+      
+      return result;
+   }
+
+//*********************************************************************************************
+//! @brief Writes the arbitrary preset value
+//! @param [in] pos : bigint which indicates the inputted arbitrary preset value  
+//! 
+//*********************************************************************************************
+   public int:[] UUT_WPosition(bigint preset)
+   {
+   
+      int receive[];
+      int data[];
+      int apreset = preset.AsInt();  // AsInt bigint to int
+      
+      data[0] = ((apreset >> 24) & 0xFF);
+      data[1] = (apreset >> 16) & 0xFF;
+      data[2] = (apreset >> 8 ) & 0xFF;
+      data[3] = apreset & 0xFF;
+      
+      Hiperface_Command cmd = { 0x43 => command,
+                              true => code0,
+                              data => data,
+                              true => responseRequired };
+      receive = this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+      
+      return receive;
+   
+   }
+
+
+
+//*********************************************************************************************
+//! @brief 
+//! @param [in] set : int which indicates the set position input
+//!                  00 (Disabled), 01 (Enabled)
+//! 
+//*********************************************************************************************
+   public void UUT_WSetPin(int setpin)
+   {
+      int receive[];
+      int data[];
+      data[0] = setpin;
+      
+      Hiperface_Command cmd = { 0x73 => command,
+                              true => code0,
+                              data => data,
+                              true => responseRequired };
+      receive = this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+         
+   }
+
+//*********************************************************************************************
+//! @brief Reads the Analouge Data 
+//! @param [in] channel : int for the channel ID namely, 
+//!                        48h - Tmp20 Temperature , 49h - LYZ Temperature
+//!                        50h - LED Current , 90h - Supply voltage
+//! 
+//*********************************************************************************************
+   public int UUT_RAnalogValue(int[0..255] channel)
+   {
+      int result;
+      int receive[];
+      int data[];
+
+      data.Push(channel);
+      Hiperface_Command cmd = { 0x44 => command,
+                              data => data,
+                              true => responseRequired };
+      receive = this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+      result = receive[1];
+      result = (result << 8) + receive[2];
+      
+      return result;
+
+   }
+
+//*********************************************************************************************
+//! @brief Enters the configuration mode and unlocks the write commands
+//!                   
+//!
+//*********************************************************************************************
+   public void UUT_EnterConfigMode()
+   {
+      int receive[];
+
+      Hiperface_Command cmd = { 0x7A => command,
+                              true => code0, 
+                              true => responseRequired };
+                              
+      receive = this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+
+   }
+
+//*********************************************************************************************
+//! @brief Leave the configuration mode and locks the write commands
+//!                   
+//!
+//*********************************************************************************************
+   public void UUT_LeaveConfigMode()
+   {
+      int receive[];
+
+      Hiperface_Command cmd = { 0x7B => command,
+                              true => code0, 
+                              false => responseRequired };
+                              
+      receive = this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+
+   }
+//*********************************************************************************************
+//! @brief Verify
+//! @param [in] dataForCalc[] : int arry indicates the configuration                     
+//!
+//*********************************************************************************************
+   public void UUT_VerifyConfig(int dataForCalc[])
+   {
+      int data[];
+      int receive[];
+      
+      int icrc = this.XFX_AFx60S_CalcCRC16(dataForCalc);
+      
+      data[0] = (icrc >> 8 ) & 0xFF;
+      data[1] = icrc & 0xFF;
+      
+      Hiperface_Command cmd = { 0x7C => command,
+                              true => code0, 
+                              data => data,
+                              false => responseRequired };
+                              
+      receive = this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+   }
+
+//*********************************************************************************************
+//! @brief Calculates the Config CRC16
+//! @param [in] dataForCalc[] : int arry indicates the configuration                 
+//!
+//*********************************************************************************************
+   public int XFX_AFx60S_CalcCRC16(int dataForCalc[])
+   {
+      int result;
+      const int CRC_INIT  = 0x0000;
+      const int CRC_FINAL = 0x00FF;
+      const int CRC_WIDTH = 16;
+      
+      int remainder = CRC_INIT;
+      int data = 0;
+      int index = 0;
+      const int crcTable[256] = 
+      [
+         0x0000, 0x90D9, 0xB16B, 0x21B2, 0xF20F, 0x62D6, 0x4364, 0xD3BD,
+         0x74C7, 0xE41E, 0xC5AC, 0x5575, 0x86C8, 0x1611, 0x37A3, 0xA77A,
+         0xE98E, 0x7957, 0x58E5, 0xC83C, 0x1B81, 0x8B58, 0xAAEA, 0x3A33,
+         0x9D49, 0x0D90, 0x2C22, 0xBCFB, 0x6F46, 0xFF9F, 0xDE2D, 0x4EF4,
+         0x43C5, 0xD31C, 0xF2AE, 0x6277, 0xB1CA, 0x2113, 0x00A1, 0x9078,
+         0x3702, 0xA7DB, 0x8669, 0x16B0, 0xC50D, 0x55D4, 0x7466, 0xE4BF,
+         0xAA4B, 0x3A92, 0x1B20, 0x8BF9, 0x5844, 0xC89D, 0xE92F, 0x79F6,
+         0xDE8C, 0x4E55, 0x6FE7, 0xFF3E, 0x2C83, 0xBC5A, 0x9DE8, 0x0D31,
+         0x878A, 0x1753, 0x36E1, 0xA638, 0x7585, 0xE55C, 0xC4EE, 0x5437,
+         0xF34D, 0x6394, 0x4226, 0xD2FF, 0x0142, 0x919B, 0xB029, 0x20F0,
+         0x6E04, 0xFEDD, 0xDF6F, 0x4FB6, 0x9C0B, 0x0CD2, 0x2D60, 0xBDB9,
+         0x1AC3, 0x8A1A, 0xABA8, 0x3B71, 0xE8CC, 0x7815, 0x59A7, 0xC97E,
+         0xC44F, 0x5496, 0x7524, 0xE5FD, 0x3640, 0xA699, 0x872B, 0x17F2,
+         0xB088, 0x2051, 0x01E3, 0x913A, 0x4287, 0xD25E, 0xF3EC, 0x6335,
+         0x2DC1, 0xBD18, 0x9CAA, 0x0C73, 0xDFCE, 0x4F17, 0x6EA5, 0xFE7C,
+         0x5906, 0xC9DF, 0xE86D, 0x78B4, 0xAB09, 0x3BD0, 0x1A62, 0x8ABB,
+         0x9FCD, 0x0F14, 0x2EA6, 0xBE7F, 0x6DC2, 0xFD1B, 0xDCA9, 0x4C70,
+         0xEB0A, 0x7BD3, 0x5A61, 0xCAB8, 0x1905, 0x89DC, 0xA86E, 0x38B7,
+         0x7643, 0xE69A, 0xC728, 0x57F1, 0x844C, 0x1495, 0x3527, 0xA5FE,
+         0x0284, 0x925D, 0xB3EF, 0x2336, 0xF08B, 0x6052, 0x41E0, 0xD139,
+         0xDC08, 0x4CD1, 0x6D63, 0xFDBA, 0x2E07, 0xBEDE, 0x9F6C, 0x0FB5,
+         0xA8CF, 0x3816, 0x19A4, 0x897D, 0x5AC0, 0xCA19, 0xEBAB, 0x7B72,
+         0x3586, 0xA55F, 0x84ED, 0x1434, 0xC789, 0x5750, 0x76E2, 0xE63B,
+         0x4141, 0xD198, 0xF02A, 0x60F3, 0xB34E, 0x2397, 0x0225, 0x92FC,
+         0x1847, 0x889E, 0xA92C, 0x39F5, 0xEA48, 0x7A91, 0x5B23, 0xCBFA,
+         0x6C80, 0xFC59, 0xDDEB, 0x4D32, 0x9E8F, 0x0E56, 0x2FE4, 0xBF3D,
+         0xF1C9, 0x6110, 0x40A2, 0xD07B, 0x03C6, 0x931F, 0xB2AD, 0x2274,
+         0x850E, 0x15D7, 0x3465, 0xA4BC, 0x7701, 0xE7D8, 0xC66A, 0x56B3,
+         0x5B82, 0xCB5B, 0xEAE9, 0x7A30, 0xA98D, 0x3954, 0x18E6, 0x883F,
+         0x2F45, 0xBF9C, 0x9E2E, 0x0EF7, 0xDD4A, 0x4D93, 0x6C21, 0xFCF8,
+         0xB20C, 0x22D5, 0x0367, 0x93BE, 0x4003, 0xD0DA, 0xF168, 0x61B1,
+         0xC6CB, 0x5612, 0x77A0, 0xE779, 0x34C4, 0xA41D, 0x85AF, 0x1576
+      ];  
+      
+      // Divide the message by the polynomial, a byte at a time.
+      for (index = 0; index < dataForCalc.Size(); index++)
+      {
+      data = (dataForCalc[index] ^ (remainder >> (CRC_WIDTH - 8)));
+      remainder = (crcTable[data] ^ (remainder << 8)) & 0xFFFF;
+      }
+
+   // The final remainder is the CRC.
+   result = ((remainder ^ CRC_FINAL)) & 0xFFFF; 
+   return result;
+   }
+
+
+//*********************************************************************************************
+//! @brief Writes the Resolution
+//! @param [in] reso : bigint which indicates the resolution: arbitrary(single),binary(multi) 
+//! 
+//*********************************************************************************************
+   public void UUT_WResolution(int reso)
+   {
+      int receive[];
+      int data[];
+      
+      data[0] = (reso >> 16) & 0xFF;
+      data[1] = (reso >> 8 ) & 0xFF;
+      data[2] = reso & 0xFF;
+
+      Hiperface_Command cmd = { 0x71 => command,
+                              true => code0,
+                              data => data,
+                              true => responseRequired };
+      receive = this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+      
+      int iSize = receive.Size();
+      string msg;
+      for(int iloop = 0; iloop<(iSize);iloop++){
+         
+         msg = msg + receive[iloop].Format( {Data.baseHex => baseField, 
+                                             false => showBase,
+                                             true => upperCase,
+                                             2 => width,
+                                             "0" => fill } ) + " ";      
+      }
+         
+      Gui.MessageBox("WResolution Response :"+ msg);
+         
+   }
+
+//*********************************************************************************************
+//! @brief Enters the internal mode
+//! @Param [In] serialMode : indicates the communication settings,
+//!                          E4 - 9600baud, 8 data bits, 1 stop bit  
+//!                          E8 - 115200baud, 8 data bits, 1 stop bit  
+//!
+//*********************************************************************************************
+   public void UUT_EnterInternal(int serialMode = 0xE4)
+   {
+      int receive[];
+      int dataToSend[];
+
+      dataToSend.Push(serialMode);
+      Hiperface_Command cmd = { 0x41 => command,
+                              0x00 => subCommand,
+                              true => code0,
+                              dataToSend => data,
+                              false => responseRequired };
+      receive = this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+
+   }
+
+//*********************************************************************************************
+//! @brief Leaves the internal mode
+//!   
+//! 
+//*********************************************************************************************
+   public void UUT_LeaveInternal()
+   {
+      int receive[];
+
+      Hiperface_Command cmd = { 0x40 => command,
+                              0x00 => subCommand,
+                              true => code0 };
+      receive = this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+
+   }
+
+//*********************************************************************************************
+//! @brief Reads the serial number, firmware version, and firmware date 
+//! @Param [Out] dateCode : string which indicates the date code  
+//! @Param [Out] firmwareVersion : string which indicates the firmware version
+//! @Param [Out] firmwareDate : string which indicates the firmware date
+//! 
+//*********************************************************************************************
+            
+   public SerialNo UUT_SerialVersion()
+   {
+      int receive[];
+      int answer[];
+      int splice[];
+      string dateCode;
+      string firmwareVersion;
+      string firmwareDate;
+      
+      Hiperface_Command cmd = { 0x56 => command,
+                              false => code0,
+                              true => responseRequired };
+      receive = this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+
+      splice = receive[0..7];
+      dateCode.FromCode(splice);
+      splice = receive[8..18];
+      firmwareVersion.FromCode(splice);
+      splice = receive[19..26];
+      firmwareDate.FromCode(splice);
+      SerialNo serialNo;
+      serialNo = {dateCode => dateCode, firmwareVersion => firmwareVersion, firmwareDate => firmwareDate};
+      return serialNo;
+  
+   }
+
+//*********************************************************************************************
+//! @brief Reads Code Sequence
+//! @retval receive : int for the Code Sequence 
+//!                   00 SW-CCW UP , 01 SW-CW UP
+//!                   02 HWLo-CW Up , 02 HWHi-CCW Up 
+//!                   03 HWLo-CCW Up , 03 HWHi-CW Up  
+//!
+//*********************************************************************************************
+   public int UUT_RCodeSeq()
+   {
+      int receive[];
+      Hiperface_Command cmd = { 0x5C => command,
+                              true => responseRequired };
+      receive = this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+      
+      return receive[0];
+   }
+ 
+ //*********************************************************************************************
+//! @brief Reads Set Position Pin
+//! @retval receive : int for the Set Pin 
+//!                   00 Deactivated , 01 Activated
+//!
+//*********************************************************************************************
+   public int UUT_RSetPin()
+   {
+      int receive[];
+      Hiperface_Command cmd = { 0x74 => command,
+                              true => responseRequired };
+      receive = this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+      
+      return receive[0];
+   }
+  //*********************************************************************************************
+//! @brief Reads Preset Value  
+//! @retval receive : bigint for the Preset 32Bits
+//!                   
+//!
+//*********************************************************************************************
+   public bigint UUT_RPreset()
+   {
+      bigint result;
+      int receive[];
+      
+      Hiperface_Command cmd = { 0x76 => command,
+                              false => code0,
+                              true => responseRequired };
+
+      receive = this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+      
+      result = receive[0];
+      result = (result << 8) + receive[1];
+      result = (result << 8) + receive[2];
+      result = (result << 8) + receive[3];
+      
+      return result;
+   }
+//*********************************************************************************************
+//! @brief Reads actual Resolution
+//! @retval receive : bigint for the Resolution in 32Bit
+//!                   
+//!
+//*********************************************************************************************
+   public bigint UUT_RResolution()
+   {
+      bigint result;
+      int receive[];
+      
+      Hiperface_Command cmd = { 0x72 => command,
+                              false => code0,
+                              true => responseRequired };
+
+      receive = this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+      
+      result = receive[32];
+      result = (result << 8) + receive[33];
+      result = (result << 8) + receive[34];
+      
+      return result;
+   }
+//*********************************************************************************************
+//! @brief 
+//! @retval receive : 
+//!                   
+//!
+//*********************************************************************************************
+   public void UUT_WCfgSetPin(int setpin)
+   {
+      int receive[];
+      int data[];
+      data[0] = setpin;
+      
+      Hiperface_Command cmd = { 0x73 => command,
+                              true => code0,
+                              data => data,
+                              true => responseRequired };
+      receive = this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+         
+   }
+
+//*********************************************************************************************
+//! @brief read´s the counter of the internal 24Bit counter
+//! @retval receive : actual counter status
+//!                   
+//!
+//*********************************************************************************************   
+   public bigint UUT_RCounter()
+   {
+      bigint result;
+      int receive[];
+      
+      Hiperface_Command cmd = { 0x46 => command,
+                              false => code0,
+                              true => responseRequired };
+
+      receive = this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+      
+      result = receive[0];
+      result = (result << 8) + receive[1];
+      result = (result << 8) + receive[2];
+      
+      return result;
+   }
+//*********************************************************************************************
+//! @brief incremetn the internal counter
+//! 
+//!                   
+//!
+//********************************************************************************************* 
+   public void UUT_WIncCounter()
+   {
+      int receive[];
+
+      Hiperface_Command cmd = { 0x47 => command,
+                              false => code0,
+                              true => responseRequired };
+      receive = this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+         
+   } 
+//*********************************************************************************************
+//! @brief clears the internal counter
+//! @retval receive : 
+//!                   
+//!
+//********************************************************************************************* 
+  public void UUT_WEraseCounter()
+   {
+      int receive[];
+
+      Hiperface_Command cmd = { 0x49 => command,
+                              true => code0,
+                              true => responseRequired };
+      receive = this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+         
+   }   
+//*********************************************************************************************
+//! @brief reads the Typelabel of the Encoder
+//! @retval receive : RS485 settings, interface config, Baudrate, parity, hadreware config
+//!                   
+//!
+//*********************************************************************************************
+   public bigint UUT_RCheckTypeLabel()
+   {
+      int receive[];
+      bigint result;
+
+      Hiperface_Command cmd = { 0x52 => command,
+                              false => code0,
+                              true => responseRequired };
+      receive = this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd);
+        
+      result = receive[0];
+      result = (result << 8) + receive[1];
+      result = (result << 8) + receive[2];
+      result = (result << 8) + receive[3];
+
+      return result;
+
+   }
+//*********************************************************************************************
+//! @brief Writes a new encoder Adress into the Encoder
+//! 
+//!                   
+//!
+//********************************************************************************************* 
+public void UUT_WChangeAdress(bigint preset)
+{
+      int receive[];
+      int data[];
+      int apreset = preset.AsInt();  // AsInt bigint to int
+      
+      data[0] = ((apreset >> 24) & 0xFF);
+      data[1] = (apreset >> 16) & 0xFF;
+      data[2] = (apreset >> 8 ) & 0xFF;
+      data[3] = apreset & 0xFF;
+
+        Hiperface_Command cmd = { 0x52 => command,
+                              true => code0,
+                              data => data,
+                              true => responseRequired };
+      receive = this.hiperfaceCmds.Hiperface_Execute(this.hiperfaceId, cmd); 
+} 
+};

@@ -1,0 +1,118 @@
+ITEL version 3.0
+
+public class EngineComInterface {
+    DriverGroup engineDrivers            = DriverGroup.New();
+    ComInterfaceDriver comInterface     = engineDrivers.NewComInterfaceDriver("COM Interface");     
+    FramingSocketDriver framingSocket   = engineDrivers.NewFramingSocketDriver("COM Frame");
+    
+   //ComInterface Configuration
+   int comNo;
+   int baudrate;
+   int amountOfBits;
+   int parity;
+   int stopBits;
+   int inQueueSize;
+   int outQueueSize;
+
+   //Framing Configuration
+   string readFramingBoT;
+   string readFramingEoT;
+   string writeFramingBoT;
+   string writeFramingEoT;
+   
+   
+   public New(int comInterfaceConfiguration[], string framingConfiguration[]) {
+      this.comNo          = comInterfaceConfiguration[0];  //3
+      this.baudrate       = comInterfaceConfiguration[1];  //9600
+      this.amountOfBits   = comInterfaceConfiguration[2];  //8
+      this.parity         = comInterfaceConfiguration[3];  //ComInterfaceDriver.noParity
+      this.stopBits       = comInterfaceConfiguration[4];  //ComInterfaceDriver.oneStopBit 
+      this.inQueueSize    = comInterfaceConfiguration[5];  //512
+      this.outQueueSize   = comInterfaceConfiguration[6];  //512
+      
+      this.readFramingBoT    = framingConfiguration[0];    //""
+      this.readFramingEoT    = framingConfiguration[1];    //"\x0a"
+      this.writeFramingBoT   = framingConfiguration[2];    //""
+      this.writeFramingEoT   = framingConfiguration[3];    //"\x0d\x0a"
+   }
+   
+   public void Init() {
+      Std.Print("Init Communication Interface...\n");
+      this.framingSocket.ConfigReadTimeouts (2000, 100, 10000);
+      //This will not change; we hard-code it here and never change the setting later.
+      
+      this.SetupComInterface();
+      this.SetupFramingSocket();
+      this.Connect();
+   }
+
+   public void SetupComInterface() {
+      try {
+         // COM-Port
+         this.comInterface.ConfigComNo         (this.comNo);
+         // Baudrate
+         this.comInterface.ConfigBaudRate      (this.baudrate);
+         // Amount of bits, parity, Stop Bits
+         this.comInterface.ConfigFormat        (this.amountOfBits, this.parity, this.stopBits);
+         // Queue sizes (512, 512)
+         this.comInterface.ConfigQueueSizes    (this.inQueueSize, this.outQueueSize);
+      } catch (Std_DriverEx e) {
+         Gui.MessageBox("Config-Fehler"+e.msg);
+      } catch (Std_ItelEx e) {
+         Gui.MessageBox(e.msg);
+      }
+   }
+
+   public void SetupFramingSocket() {
+      try {
+         this.framingSocket.ConfigInterface    (this.comInterface);
+         this.framingSocket.ConfigReadFraming  (this.readFramingBoT, this.readFramingEoT);
+         this.framingSocket.ConfigWriteFraming (this.writeFramingBoT, this.writeFramingEoT);
+      } catch (Std_DriverEx e) {
+         Gui.MessageBox("Config-Fehler"+e.msg); 
+      } catch (Std_ItelEx e) {
+         Gui.MessageBox(e.msg);
+      }
+   }
+   
+   public void Connect() {
+      try {
+         Std.Print("Connecting to Motor...\n");
+         this.engineDrivers.Open();
+         Std.Print("Connecting succeed!\n");
+         //string reply = this.Read();
+         //Std.Print(reply);
+      } catch (Std_DriverEx e) {
+         Std.Print("Connecting failed!");
+         Gui.MessageBox("Config-Fehler"+e.msg);
+      }
+   }
+   
+   public void Disconnect() {
+      try {
+         this.engineDrivers.Close();
+      } catch (Std_DriverEx e) {
+         Gui.MessageBox("Config-Fehler"+e.msg);
+      }
+   }
+   
+   public void Write(string command) {
+      this.framingSocket.Write(command);
+   }
+   
+   public string Read() {
+      string replyString = "";
+      byteseq reply = [];
+      bool receivingDone = false;
+
+      try {
+         FramingSocketDriver_Data socketData = this.framingSocket.Read(1024);
+         reply = socketData.data;
+         replyString = reply.AsString();
+         replyString.Trim();
+      } catch (Std_DriverEx e) {
+         replyString = "No response";
+      }
+      return replyString;
+   }
+};

@@ -1,0 +1,8 @@
+require "HiperfaceCmds.item"
+
+public class test{
+    HiperfaceCmds.init("test");
+
+    Std.Print("Test ausgefuehrt");
+
+}
